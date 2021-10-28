@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        [v-cloak]{
+            display: none;
+        }
+    </style>
+    <title>Vue Weather app</title>
+</head>
+<body>
+    <h1>Weather App</h1>
+
+    <div id="app" v-cloak>
+        
+        <div >
+            <input v-model = "city" placeholder="Enter City" type="text">
+            <button @click="callAPI">GO</button>
+        </div>
+        <div v-if="hideError"  class="">
+            <h2>There seems to have been a problem, try again.</h2>
+        </div>
+        <div v-else-if = "searched">
+            <!-- pack rain -->
+            <hr>
+            <div v-if ="packRain" class="rain">
+                <h3>Pack your umbrella!</h3>
+                <hr>
+            </div>
+            <div v-else class="rain">
+                <h3>Don't pack your umbrella!</h3>
+                <hr>
+            </div>
+            
+            <!-- pack temp -->
+            <div v-if = "packTempCold" class="tempCold">
+                <h3>Pack for Cold</h3>
+                <hr>
+            </div>
+            
+            <div v-if = "packTempWarm" class="tempWarm">
+                <h3>Pack for Warm</h3>
+                <hr>
+            </div>
+            
+            <div v-if = "packTempHot" class="tempHot">
+                <h3>Pack for Hot</h3> 
+                <hr>
+            </div>
+            <!-- summary -->
+            <div class="summary">
+                <ol>
+                    <li v-for="day in summary">
+                        Day Temp:{{day.temp.day}} Wind Speed:{{day.wind}} <span v-if ="day.rain">Rain:{{day.rain}} </span> 
+                    </li>
+                </ol>
+            </div>
+            <hr>
+            <!-- mask -->
+            <div v-if ="packMask" class="air">
+                <h3>Pack your mask</h3>
+            </div>
+            <div v-else class="air">
+               <h3>Don't pack your mask</h3>
+            </div>
+        </div>
+        
+        
+    </div> 
+
+    
+
+    <script src="https://unpkg.com/vue@next"></script>
+    <script>
+        let app = Vue.createApp({
+            data: function(){
+                return{
+                    packRain: null,
+                    packTempCold: null,
+                    packTempWarm: null,
+                    packTempHot: null,
+                    packMask: null,
+                    summary: [],
+                    city: null,
+                    hideError: false,
+                    searched:false,
+                    
+                }
+            },
+            methods: {
+                callAPI(){
+                    //reset data
+                    this.packRain = null;
+                    this.packTempCold = null;
+                    this.packTempWarm = null;
+                    this.packTempHot = null;
+                    this.packMask = null;
+                    this.searched = false;
+                    this.hideError = false;
+                    
+                    
+                    fetch("/api/"+ this.city)
+                    .then((res) =>{
+                        return res.json();
+                    })
+                    .then(result => {
+                        console.log(result.error);
+                        this.hideError = result.error;
+                        this.searched = true;
+                        if(!result.error){
+                            console.log(result)
+                            for(let i = 0; i<5;i++){ //rain
+                                
+                             if (result.array[i].rain != null){
+                                
+                                this.packRain = true;
+                                    
+                             }
+                         }
+                         let min = result.array[0].temp.min;
+                         let max = result.array[0].temp.max;
+                         for(let i = 1; i < 5; i++){
+                            if (result.array[i].temp.min < min )
+                                min = result.array[i].temp.min;
+                            if (result.array[i].temp.max > max )
+                                max = result.array[i].temp.max;
+                         }
+                         //temp ranges
+                         
+                         if(min < 10) this.packTempCold = true;
+                         if (min>= 10 || max < 20)  this.packTempWarm = true;
+                         if(max >= 20) this.packTempHot = true;
+
+                         //summary
+                         this.summary = result.array;
+
+                         //air
+                         if(result.pm25 > 10) packMask = true;
+
+                         //this.holdCity = this.city;
+                         //this.city = null;
+
+                    }
+
+
+
+
+
+                        
+                    })
+                    .catch ((err)=>{
+                        this.hideError = true;
+                    })
+                }
+            }
+        })
+
+        
+        app.mount('#app')
+    </script>
+</body>
+</html>
